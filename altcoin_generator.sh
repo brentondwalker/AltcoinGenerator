@@ -178,6 +178,11 @@ newcoin_replace_vars()
         git mv $i $(echo $i| sed "s/litecoin/$COIN_NAME_LOWER/")
     done
 
+    # At least one file has "LTC" in the name - LTCException
+    for i in $(find . -type f | grep -v "^./.git" | grep LTC); do
+        git mv $i $(echo $i| sed "s/LTC/$COIN_UNIT/")
+    done
+
     # now replace all litecoin references to the new coin name
     for i in $(find . -type f | grep -v "^./.git"); do
         sed -i "s/Litecoin/$COIN_NAME/g" $i
