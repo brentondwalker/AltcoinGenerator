@@ -29,6 +29,7 @@ CHAIN="-regtest"
 # dont change the following variables unless you know what you are doing
 GENESISHZERO_REPOS=https://github.com/lhartikk/GenesisH0
 LITECOIN_REPOS=https://github.com/litecoin-project/litecoin.git
+LITECOIN_HISTORIC_TAG=v0.14.2
 LITECOIN_PUB_KEY=040184710fa689ad5023690c80f3a49c8f13f8d45b8c857fbcbc8bc4a8e4d3eb4b10f4d4604fa08dce601aaf0f470216fe1b51850b4acf21b179c45070ac7b03a9
 LITECOIN_MERKLE_HASH=97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9
 LITECOIN_MAIN_GENESIS_HASH=12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2
@@ -166,8 +167,8 @@ newcoin_replace_vars()
     fi
     # clone litecoin
     git clone $LITECOIN_REPOS $COIN_NAME_LOWER
-
     pushd $COIN_NAME_LOWER
+    git checkout tags/$LITECOIN_HISTORIC_TAG
 
     # first rename all directories
     for i in $(find . -type d | grep -v "^./.git" | grep litecoin); do 
