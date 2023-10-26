@@ -14,15 +14,15 @@
 # CHAIN variable below
 
 # change the following variables to match your new coin
-COIN_NAME="MyCoin"
-COIN_UNIT="MYC"
+COIN_NAME="FiCoin"
+COIN_UNIT="FIC"
 # 42 million lite coins at total
 TOTAL_SUPPLY=42000000
-MAINNET_PORT="54321"
-TESTNET_PORT="54322"
+MAINNET_PORT="54381"
+TESTNET_PORT="54382"
 PHRASE="Some newspaper headline that describes something that happened today"
 # First letter of the wallet address. Check https://en.bitcoin.it/wiki/Base58Check_encoding
-PUBKEY_CHAR="20"
+PUBKEY_CHAR="14"
 # leave CHAIN empty for main network, -regtest for regression network and -testnet for test network
 CHAIN="-regtest"
 
@@ -59,7 +59,7 @@ fi
 
 docker_build_image()
 {
-    IMAGE=$(docker images -q ubuntu-newcoin)
+    IMAGE=$(sudo docker images -q ubuntu-newcoin)
     if [ -z $IMAGE ]; then
         echo Building docker image
         if [ ! -f ubuntu-litecoin/Dockerfile ]; then
@@ -69,13 +69,12 @@ FROM ubuntu:16.04
 RUN echo deb http://ppa.launchpad.net/bitcoin/bitcoin/ubuntu xenial main >> /etc/apt/sources.list
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv D46F45428842CE5E
 RUN apt-get update
-RUN apt-get -y install ccache git libssl1.0.0 libevent-pthreads-2.0-5 libevent-2.0-5 build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils libdb4.8-dev libdb4.8++-dev libminiupnpc-dev libzmq3-dev libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libprotobuf-dev protobuf-compiler libqrencode-dev python-pip mlocate wget
+RUN apt-get -y install ccache git libboost-system1.58.0 libboost-filesystem1.58.0 libboost-program-options1.58.0 libboost-thread1.58.0 libboost-chrono1.58.0 libssl1.0.0 libevent-pthreads-2.0-5 libevent-2.0-5 build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils libboost-system-dev libboost-filesystem-dev libboost-chrono-dev libboost-program-options-dev libboost-test-dev libboost-thread-dev libdb4.8-dev libdb4.8++-dev libminiupnpc-dev libzmq3-dev libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libprotobuf-dev protobuf-compiler libqrencode-dev python-pip mlocate wget
 RUN cd /tmp; wget -c http://archive.ubuntu.com/ubuntu/pool/universe/f/fmtlib/libfmt-dev_4.0.0+ds-2_amd64.deb; apt install ./libfmt-dev_4.0.0+ds-2_amd64.deb
-RUN cd /tmp; wget https://boostorg.jfrog.io/artifactory/main/release/1.71.0/source/boost_1_71_0.tar.gz; tar zxf boost_1_71_0.tar.gz; mv boost_1_71_0/boost /usr/include/; rm boost_1_71_0.tar.gz; rm -rf boost_1_71_0
 RUN pip install construct==2.5.2 scrypt
 EOF
         fi 
-        docker build --label ubuntu-newcoin --tag ubuntu-newcoin $DIRNAME/ubuntu-litecoin/
+        sudo docker build --label ubuntu-newcoin --tag ubuntu-newcoin $DIRNAME/ubuntu-litecoin/
     else
         echo Docker image already built
     fi
@@ -83,12 +82,13 @@ EOF
 
 docker_run_genesis() {
     mkdir -p $DIRNAME/.ccache
-    docker run -v $DIRNAME/GenesisH0:/GenesisH0 ubuntu-newcoin /bin/bash -c "$1"
+    sudo docker run -v $DIRNAME/GenesisH0:/GenesisH0 ubuntu-newcoin /bin/bash -c "$1"
 }
 
 docker_run() {
     mkdir -p $DIRNAME/.ccache
-    docker run -v $DIRNAME/GenesisH0:/GenesisH0 -v $DIRNAME/.ccache:/root/.ccache -v $DIRNAME/$COIN_NAME_LOWER:/$COIN_NAME_LOWER ubuntu-newcoin /bin/bash -c "$1"
+    #sudo docker run -v $DIRNAME/boost_1_71_0/boost:/usr/include/boost -v $DIRNAME/GenesisH0:/GenesisH0 -v $DIRNAME/.ccache:/root/.ccache -v $DIRNAME/$COIN_NAME_LOWER:/$COIN_NAME_LOWER ubuntu-newcoin /bin/bash -c "$1"
+    sudo docker run -v $DIRNAME/GenesisH0:/GenesisH0 -v $DIRNAME/.ccache:/root/.ccache -v $DIRNAME/$COIN_NAME_LOWER:/$COIN_NAME_LOWER ubuntu-newcoin /bin/bash -c "$1"
 }
 
 docker_run_node()
@@ -102,11 +102,11 @@ rpcuser=${COIN_NAME_LOWER}rpc
 rpcpassword=$(</dev/urandom tr -dc '12345qwertQWERTasdfgASDFGzxcvbZXCVB' | head -c32)
 EOF
     fi
-    if ! docker network inspect newcoin &>/dev/null; then
-        docker network create --subnet=$DOCKER_NETWORK.0/16 newcoin
+    if ! sudo docker network inspect newcoin &>/dev/null; then
+        sudo docker network create --subnet=$DOCKER_NETWORK.0/16 newcoin
     fi
 
-    docker run --net newcoin --ip $DOCKER_NETWORK.${NODE_NUMBER} -v $DIRNAME/miner${NODE_NUMBER}:/root/.$COIN_NAME_LOWER -v $DIRNAME/$COIN_NAME_LOWER:/$COIN_NAME_LOWER ubuntu-newcoin /bin/bash -c "$NODE_COMMAND"
+    sudo docker run --net newcoin --ip $DOCKER_NETWORK.${NODE_NUMBER} -v $DIRNAME/miner${NODE_NUMBER}:/root/.$COIN_NAME_LOWER -v $DIRNAME/$COIN_NAME_LOWER:/$COIN_NAME_LOWER ubuntu-newcoin /bin/bash -c "$NODE_COMMAND"
 }
 
 generate_genesis_block()
@@ -180,11 +180,11 @@ newcoin_replace_vars()
         git mv $i $(echo $i| sed "s/litecoin/$COIN_NAME_LOWER/")
     done
 
-    # At least one file has "LTC" in the name - LTCException
+    ############################# LTCException problem!!
     for i in $(find . -type f | grep -v "^./.git" | grep LTC); do
         git mv $i $(echo $i| sed "s/LTC/$COIN_UNIT/")
     done
-
+    
     # now replace all litecoin references to the new coin name
     for i in $(find . -type f | grep -v "^./.git"); do
         sed -i "s/Litecoin/$COIN_NAME/g" $i
@@ -224,10 +224,12 @@ newcoin_replace_vars()
 
 build_new_coin()
 {
+    sleep 1
     if [ ! -x $COIN_NAME_LOWER/src/${COIN_NAME_LOWER}d ]; then
         docker_run "cd /$COIN_NAME_LOWER ; bash  /$COIN_NAME_LOWER/autogen.sh"
         docker_run "cd /$COIN_NAME_LOWER ; bash  /$COIN_NAME_LOWER/configure"
-        docker_run "cd /$COIN_NAME_LOWER ; make -j2"
+        #docker_run "cd /$COIN_NAME_LOWER ; make CXXFLAGS='-g -O2 -fno-extended-identifiers -DBOOST_NO_CXX11_SCOPED_ENUMS' -j8"	
+	docker_run "cd /$COIN_NAME_LOWER ; make -j 8"
     fi
 }
 
@@ -240,8 +242,12 @@ docker_run_node 2 "cd /$COIN_NAME_LOWER ; ./src/${COIN_NAME_LOWER}d $CHAIN -list
 docker_run_node 3 "cd /$COIN_NAME_LOWER ; ./src/${COIN_NAME_LOWER}d $CHAIN -listen -noconnect -bind=$DOCKER_NETWORK.3 -addnode=$DOCKER_NETWORK.1 -addnode=$DOCKER_NETWORK.2 -addnode=$DOCKER_NETWORK.4 -addnode=$DOCKER_NETWORK.5" &
 docker_run_node 4 "cd /$COIN_NAME_LOWER ; ./src/${COIN_NAME_LOWER}d $CHAIN -listen -noconnect -bind=$DOCKER_NETWORK.4 -addnode=$DOCKER_NETWORK.1 -addnode=$DOCKER_NETWORK.2 -addnode=$DOCKER_NETWORK.3 -addnode=$DOCKER_NETWORK.5" &
 docker_run_node 5 "cd /$COIN_NAME_LOWER ; ./src/${COIN_NAME_LOWER}d $CHAIN -listen -noconnect -bind=$DOCKER_NETWORK.5 -addnode=$DOCKER_NETWORK.1 -addnode=$DOCKER_NETWORK.2 -addnode=$DOCKER_NETWORK.3 -addnode=$DOCKER_NETWORK.4" &
+#docker_run_node 2 "cd /$COIN_NAME_LOWER ; ./src/litecoind $CHAIN -listen -noconnect -bind=$DOCKER_NETWORK.2 -addnode=$DOCKER_NETWORK.1 -addnode=$DOCKER_NETWORK.3 -addnode=$DOCKER_NETWORK.4 -addnode=$DOCKER_NETWORK.5" &
+#docker_run_node 3 "cd /$COIN_NAME_LOWER ; ./src/litecoind $CHAIN -listen -noconnect -bind=$DOCKER_NETWORK.3 -addnode=$DOCKER_NETWORK.1 -addnode=$DOCKER_NETWORK.2 -addnode=$DOCKER_NETWORK.4 -addnode=$DOCKER_NETWORK.5" &
+#docker_run_node 4 "cd /$COIN_NAME_LOWER ; ./src/litecoind $CHAIN -listen -noconnect -bind=$DOCKER_NETWORK.4 -addnode=$DOCKER_NETWORK.1 -addnode=$DOCKER_NETWORK.2 -addnode=$DOCKER_NETWORK.3 -addnode=$DOCKER_NETWORK.5" &
+#docker_run_node 5 "cd /$COIN_NAME_LOWER ; ./src/litecoind $CHAIN -listen -noconnect -bind=$DOCKER_NETWORK.5 -addnode=$DOCKER_NETWORK.1 -addnode=$DOCKER_NETWORK.2 -addnode=$DOCKER_NETWORK.3 -addnode=$DOCKER_NETWORK.4" &
 
 echo "Docker containers should be up and running now. You may run the following command to check the network status:
-for i in \$(docker ps -q); do docker exec \$i /$COIN_NAME_LOWER/src/${COIN_NAME_LOWER}-cli -regtest getinfo; done"
+for i in \$(sudo docker ps -q); do sudo docker exec \$i /$COIN_NAME_LOWER/src/${COIN_NAME_LOWER}-cli $CHAIN getinfo; done"
 echo "To ask the nodes to mine some blocks simply run:
-for i in \$(docker ps -q); do docker exec \$i /$COIN_NAME_LOWER/src/${COIN_NAME_LOWER}-cli -regtest generate 2  & done"
+for i in \$(sudo docker ps -q); do sudo docker exec \$i /$COIN_NAME_LOWER/src/${COIN_NAME_LOWER}-cli $CHAIN generate 2  & done"
